@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="manifest" href="manifest.json">
+    <title>Classroom通知</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Classroom通知">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+        padding: 60px 20px;
+        background-color: #f5f5f7;
+      }
+      .btn {
+        background-color: #5B8DEF;
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 12px;
+        cursor: pointer;
+        width: 100%;
+        max-width: 320px;
+      }
+      p { color: #777; font-size: 13px; line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <button id="enableBtn" class="btn" style="display:none;" onclick="enableNotifications()">通知を有効にする</button>
+    <p id="status"></p>
+
+    <script>
+      const FLUTTERFLOW_URL = 'https://あなたのFlutterFlowアプリURL';
+
+      // URLからstudentIdを受け取り、保存する
+      const params = new URLSearchParams(window.location.search);
+      const studentIdFromUrl = params.get('studentId');
+      if (studentIdFromUrl) {
+        localStorage.setItem('studentId', studentIdFromUrl);
+      }
+      const studentId = localStorage.getItem('studentId');
+
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({ appId: "YOUR_ONESIGNAL_APP_ID" });
+      });
+
+      const alreadySetup = localStorage.getItem('onesignal_setup_done') === 'true';
+      const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+      const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+      if (alreadySetup) {
+        redirectToApp();
+      } else if (isIos && !isStandalone) {
+        document.getElementById('status').innerText =
+          '通知を受け取るには、まずこの画面を「ホーム画面に追加」してから、追加したアイコンを開き直してください。';
+      } else if (studentId) {
+        document.getElementById('enableBtn').style.display = 'block';
+      } else {
+        document.getElementById('status').innerText = '連携情報が見つかりません。もう一度連携をやり直してください。';
+      }
+
+      function enableNotifications() {
+        document.getElementById('status').innerText = '設定中...';
+        OneSignalDeferred.push(async function(OneSignal) {
+          await OneSignal.Notifications.requestPermission();
+          await OneSignal.login(studentId);
+          localStorage.setItem('onesignal_setup_done', 'true');
+          redirectToApp();
+        });
+      }
+
+      function redirectToApp() {
+        window.location.href = FLUTTERFLOW_URL;
+      }
+    </script>
+  </body>
+</html>
